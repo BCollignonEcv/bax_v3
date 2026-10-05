@@ -1,0 +1,47 @@
+{
+  "name": "bax",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --build && vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --build",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/",
+    "icons": "node scripts/generate-icons.mjs",
+    "types:supabase": "supabase gen types typescript --linked --schema public > src/types/database.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/instrument-sans": "^5.3.0",
+    "@lucide/vue": "^1.52.0",
+    "@supabase/supabase-js": "^2.117.2",
+    "idb-keyval": "^6.3.0",
+    "pinia": "^4.0.3",
+    "vue": "^3.5.43",
+    "vue-router": "^5.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.4",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "@vue/tsconfig": "^0.9.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-vue": "^10.11.1",
+    "jiti": "^2.7.0",
+    "opentype.js": "^2.0.0",
+    "prettier": "^3.9.9",
+    "sharp": "^0.35.5",
+    "supabase": "^2.119.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vite": "^8.3.2",
+    "vite-plugin-pwa": "^2.0.0",
+    "vue-tsc": "^3.3.12"
+  }
+}

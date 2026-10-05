@@ -1,0 +1,157 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/bricolage-grotesque/wght.css';
+@import '@fontsource-variable/instrument-sans/wght.css';
+
+/* Charte BAX — valeurs relevées sur les maquettes */
+:root {
+  --canvas: #f6f1eb;
+  --card: #fefdf9;
+  --ink: #1f1a16;
+  --ink-soft: #4a423b;
+  --muted: #7a7067;
+  --line: #ebe3d9;
+  --sunken: #eee6db;
+  --track: #efe5dc;
+  --on-ink: #f6f1eb;
+  --scrim: rgb(31 26 22 / 0.38);
+
+  --baptiste: #2e5bcc;
+  --alix: #d27420;
+
+  --done: #23814f;
+  --done-soft: #e7f2ea;
+  --done-line: #cfe5d6;
+  --doing: #2e5bcc;
+  --doing-soft: #e3e8fb;
+
+  --prio-high: #b4532a;
+  --prio-high-soft: #f5e2d6;
+  --prio-medium: #8a6a3f;
+  --prio-medium-soft: #efe6da;
+  --prio-low: #6f7a72;
+  --prio-low-soft: #eae8e2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #15110e;
+    --card: #211c18;
+    --ink: #f4ede3;
+    --ink-soft: #d9d0c5;
+    --muted: #a0968b;
+    --line: #2f2822;
+    --sunken: #2b2620;
+    --track: #2f2822;
+    --on-ink: #15110e;
+    --scrim: rgb(0 0 0 / 0.55);
+
+    --baptiste: #89a7ff;
+    --alix: #f2a25a;
+
+    --done: #5fc08b;
+    --done-soft: #1b2a20;
+    --done-line: #23362a;
+    --doing: #89a7ff;
+    --doing-soft: #233257;
+
+    --prio-high: #f0a06f;
+    --prio-high-soft: #3a2a20;
+    --prio-medium: #d6b98d;
+    --prio-medium-soft: #342c22;
+    --prio-low: #aab3ac;
+    --prio-low-soft: #2b2a26;
+  }
+}
+
+@theme inline {
+  --font-sans: 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: var(--canvas);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-sunken: var(--sunken);
+  --color-track: var(--track);
+  --color-on-ink: var(--on-ink);
+  --color-scrim: var(--scrim);
+  --color-baptiste: var(--baptiste);
+  --color-alix: var(--alix);
+  --color-done: var(--done);
+  --color-done-soft: var(--done-soft);
+  --color-done-line: var(--done-line);
+  --color-doing: var(--doing);
+  --color-doing-soft: var(--doing-soft);
+  --color-prio-high: var(--prio-high);
+  --color-prio-high-soft: var(--prio-high-soft);
+  --color-prio-medium: var(--prio-medium);
+  --color-prio-medium-soft: var(--prio-medium-soft);
+  --color-prio-low: var(--prio-low);
+  --color-prio-low-soft: var(--prio-low-soft);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    background: var(--canvas);
+  }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+  button {
+    cursor: pointer;
+  }
+  input,
+  textarea,
+  select {
+    /* évite le zoom automatique d'iOS sur les champs */
+    font-size: 16px;
+  }
+}
+
+@utility pt-safe {
+  padding-top: max(env(safe-area-inset-top), 16px);
+}
+@utility pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+@utility bottom-safe {
+  bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+@layer components {
+  .card {
+    @apply bg-card rounded-3xl border border-line;
+  }
+  .btn-primary {
+    @apply bg-ink text-on-ink font-semibold rounded-2xl h-13 px-6 inline-flex items-center justify-center gap-2 active:opacity-85 disabled:opacity-40;
+  }
+  .btn-secondary {
+    @apply bg-card text-ink font-semibold rounded-2xl h-11 px-4 inline-flex items-center justify-center gap-2 border border-line active:bg-sunken disabled:opacity-40;
+  }
+  .btn-soft {
+    @apply bg-sunken text-ink font-semibold rounded-2xl h-13 px-6 inline-flex items-center justify-center active:opacity-85;
+  }
+  .field {
+    @apply w-full bg-card border border-line rounded-2xl px-4 h-13 text-ink placeholder:text-muted outline-none focus:border-ink;
+  }
+  .label {
+    @apply block text-sm font-semibold text-ink-soft mb-2;
+  }
+  .label-hint {
+    @apply font-normal text-muted;
+  }
+  .section-title {
+    @apply text-xs font-semibold tracking-wider uppercase text-muted;
+  }
+}
