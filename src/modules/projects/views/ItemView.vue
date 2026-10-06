@@ -218,7 +218,9 @@ function unlink() {
             :class="
               drag.id === option.id
                 ? 'relative z-10 scale-[1.02] shadow-xl'
-                : 'transition-transform duration-200'
+                : drag.settling
+                  ? ''
+                  : 'transition-transform duration-200'
             "
             :style="{ transform: `translateY(${shift(index)}px)` }"
             @pointerdown="onPointerDown($event, index)"

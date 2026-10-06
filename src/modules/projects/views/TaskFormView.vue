@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Camera, X } from '@lucide/vue'
+import { Camera, Plus, X } from '@lucide/vue'
 import Avatars from '@/core/components/Avatars.vue'
 import DateField from '@/core/components/DateField.vue'
 import OfflineNotice from '@/core/components/OfflineNotice.vue'
@@ -19,6 +19,7 @@ import { useAssignees, type AssigneeChoice } from '../composables/useAssignees'
 import { useItemsStore, type ItemInput } from '../stores/items'
 import { usePhotosStore } from '../stores/photos'
 import { useProjectsStore } from '../stores/projects'
+import { useSubtasksStore } from '../stores/subtasks'
 import { PRIORITIES, STATUSES, type Priority, type Status } from '../types'
 
 const props = defineProps<{ projectId: string }>()
@@ -26,6 +27,7 @@ const props = defineProps<{ projectId: string }>()
 const store = useProjectsStore()
 const items = useItemsStore()
 const photos = usePhotosStore()
+const subtasks = useSubtasksStore()
 const profiles = useProfilesStore()
 const network = useNetworkStore()
 const assignees = useAssignees()
@@ -44,6 +46,9 @@ const form = reactive({
 type DraftItem = { key: string; itemId?: string; values: ItemInput }
 const draftItems = ref<DraftItem[]>([])
 const files = ref<{ file: File; preview: string }[]>([])
+/** Sous-tâches en attente, créées dans l'ordre avec la tâche. */
+const draftSubtasks = ref<{ key: string; title: string }[]>([])
+const subtaskDraft = ref('')
 const photoSheet = ref(false)
 const editingKey = ref<string | null>(null)
 const saving = ref(false)
@@ -71,6 +76,14 @@ function saveDraft(values: ItemInput) {
 function removeDraft() {
   draftItems.value = draftItems.value.filter((d) => d.key !== editingKey.value)
   editingKey.value = null
+}
+
+/** Entrée : ajoute l'étape et garde le focus pour la suivante. */
+function addSubtaskDraft() {
+  const title = subtaskDraft.value.trim()
+  if (!title) return
+  draftSubtasks.value.push({ key: crypto.randomUUID(), title })
+  subtaskDraft.value = ''
 }
 
 function addFiles(list: File[]) {
@@ -104,6 +117,12 @@ async function submit() {
   if (!task) {
     saving.value = false
     return
+  }
+  if (draftSubtasks.value.length) {
+    await subtasks.addSubtasks(
+      task.id,
+      draftSubtasks.value.map((d) => ({ title: d.title })),
+    )
   }
   for (const draft of draftItems.value) {
     if (draft.itemId) await items.linkItem(task.id, draft.itemId)
@@ -194,6 +213,39 @@ async function submit() {
           class="field h-auto py-3"
           placeholder="Détails, mesures, références…"
         />
+      </div>
+
+      <div>
+        <p class="label">Sous-tâches <span class="label-hint">· facultatives</span></p>
+        <div class="card divide-y divide-line overflow-hidden">
+          <div
+            v-for="(draft, i) in draftSubtasks"
+            :key="draft.key"
+            class="flex min-h-13 items-center gap-3 pr-2 pl-4"
+          >
+            <span class="size-6 shrink-0 rounded-full border-2 border-muted/60" aria-hidden="true" />
+            <span class="min-w-0 flex-1 break-words">{{ draft.title }}</span>
+            <button
+              type="button"
+              class="flex size-10 shrink-0 items-center justify-center text-ink-soft"
+              :aria-label="`Retirer « ${draft.title} »`"
+              @click="draftSubtasks.splice(i, 1)"
+            >
+              <X :size="16" />
+            </button>
+          </div>
+          <label class="flex items-center gap-3 px-4">
+            <Plus :size="20" class="shrink-0 text-ink-soft" />
+            <input
+              v-model="subtaskDraft"
+              class="h-13 min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted"
+              placeholder="Ajouter une sous-tâche"
+              enterkeyhint="enter"
+              @keydown.enter.prevent="addSubtaskDraft"
+              @blur="addSubtaskDraft"
+            />
+          </label>
+        </div>
       </div>
 
       <div>

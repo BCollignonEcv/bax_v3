@@ -6,6 +6,7 @@ import { useProjectsStore } from './stores/projects'
 import { usePhotosStore } from './stores/photos'
 import { useItemsStore } from './stores/items'
 import { useOptionsStore } from './stores/options'
+import { useSubtasksStore } from './stores/subtasks'
 import ProjectsHomeCard from './components/ProjectsHomeCard.vue'
 
 const projectsModule: BaxModule = {
@@ -23,6 +24,7 @@ const projectsModule: BaxModule = {
       usePhotosStore().start(),
       useItemsStore().start(),
       useOptionsStore().start(),
+      useSubtasksStore().start(),
     ])
   },
 }

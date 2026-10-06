@@ -6,6 +6,7 @@ export type TaskPhoto = Tables<'task_photos'>
 export type ShoppingItem = Tables<'shopping_items'>
 export type TaskItemLink = Tables<'task_shopping_items'>
 export type ItemOption = Tables<'shopping_item_options'>
+export type Subtask = Tables<'task_subtasks'>
 export type Priority = Enums<'task_priority'>
 export type Status = Enums<'task_status'>
 

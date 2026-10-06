@@ -60,7 +60,9 @@ Exécuter ensuite, de la même façon, les migrations suivantes, dans l'ordre :
 - [`0002_item_options.sql`](supabase/migrations/0002_item_options.sql) : options d'achat (liens) des articles
   (table `shopping_item_options`, colonne `shopping_items.chosen_option_id`, RLS et Realtime) ;
 - [`0003_option_images.sql`](supabase/migrations/0003_option_images.sql) : image d'aperçu des options
-  (colonne `image_path`).
+  (colonne `image_path`) ;
+- [`0004_subtasks.sql`](supabase/migrations/0004_subtasks.sql) : sous-tâches (table `task_subtasks`, triggers de
+  validation automatique, RLS et Realtime).
 
 ### 2.2 bis Fonction `link-preview` (image et prix des liens)
 
@@ -200,6 +202,16 @@ Se connecter une fois : la session reste ouverte sur l'appareil.
     (Amazon notamment) bloquent cette lecture : l'option reste alors sans image ;
   - prix compté dans les totaux (budget, tâche, liste de courses) : même règle, mais avec l'option **la plus
     chère** quand rien n'est retenu ni saisi.
+- **Sous-tâches** (un seul niveau) :
+  - section entre la description et les photos ; ajout rapide (Entrée garde le focus), modification du texte en
+    le touchant, suppression par balayage vers la gauche (« Annuler »), réorganisation par la poignée ⠿ ;
+  - validation automatique, appliquée par la base (trigger) pour rester cohérente entre les deux téléphones :
+    cocher la dernière étape termine la tâche (« Annuler » décoche l'étape et rétablit le statut d'avant) ;
+    décocher une étape, ou ajouter une étape non cochée, remet une tâche terminée « en cours ». Supprimer une
+    étape ou créer des étapes déjà cochées ne termine jamais la tâche ; terminer une tâche à la main reste possible ;
+  - « Transformer en sous-tâches » sous une description contenant des lignes de liste (`-`, `*`, `•`, `✓`,
+    `1.`, `1)`) ; `[x]` ou `✓` donne une étape cochée ;
+  - les étapes suivent leur tâche (archivage, restauration, suppression).
 - **Liens** : dans les descriptions de tâches et les notes (articles, options), les adresses `http(s)://…` et
   `www.…` deviennent cliquables (domaine affiché, ouverture dans un nouvel onglet). Le texte n'est jamais
   interprété comme du HTML.

@@ -39,6 +39,12 @@ export const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    path: '/projets/:projectId/taches/:taskId/sous-taches',
+    name: 'subtasks-convert',
+    component: () => import('./views/SubtaskConvertView.vue'),
+    props: true,
+  },
+  {
     path: '/projets/:projectId/taches/:taskId',
     name: 'task',
     component: () => import('./views/TaskView.vue'),

@@ -246,6 +246,54 @@ export type Database = {
           },
         ]
       }
+      task_subtasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          done: boolean
+          id: string
+          position: number
+          task_id: string
+          title: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          done?: boolean
+          id?: string
+          position?: number
+          task_id: string
+          title: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          done?: boolean
+          id?: string
+          position?: number
+          task_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'task_subtasks_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'task_subtasks_task_id_fkey'
+            columns: ['task_id']
+            isOneToOne: false
+            referencedRelation: 'tasks'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       tasks: {
         Row: {
           archived_at: string | null

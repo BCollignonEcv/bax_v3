@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Archive, Check, ChevronLeft, ChevronRight, Ellipsis, Pencil, RotateCcw, Trash2 } from '@lucide/vue'
+import {
+  Archive,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Ellipsis,
+  ListChecks,
+  Pencil,
+  RotateCcw,
+  Trash2,
+} from '@lucide/vue'
 import AutoTextarea from '@/core/components/AutoTextarea.vue'
 import Avatars from '@/core/components/Avatars.vue'
 import BottomSheet from '@/core/components/BottomSheet.vue'
@@ -18,6 +28,8 @@ import { useProfilesStore } from '@/core/stores/profiles'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import TaskItems from '../components/TaskItems.vue'
 import TaskPhotos from '../components/TaskPhotos.vue'
+import TaskSubtasks from '../components/TaskSubtasks.vue'
+import { hasListLines } from '../composables/descriptionLines'
 import { useAssignees, type AssigneeChoice } from '../composables/useAssignees'
 import { useProjectsStore } from '../stores/projects'
 import { PRIORITIES, STATUSES, type Priority, type Status } from '../types'
@@ -160,6 +172,12 @@ async function remove() {
         @blur="saveTitle"
         @keydown.enter.prevent="($event.target as HTMLTextAreaElement).blur()"
       />
+      <span
+        v-if="task.status === 'done'"
+        class="mt-1 inline-flex items-center gap-1 rounded-lg bg-done-soft px-2 py-1 text-sm font-semibold text-done"
+      >
+        <Check :size="14" :stroke-width="3" /> Terminée
+      </span>
 
       <div
         v-if="task.archived_at"
@@ -171,7 +189,12 @@ async function remove() {
 
       <OfflineNotice class="mt-3" />
 
-      <SegmentedControl v-model="status" :options="STATUSES" class="mt-4" />
+      <SegmentedControl
+        v-model="status"
+        :options="STATUSES"
+        :active-class="{ done: 'bg-done-soft text-done shadow-sm' }"
+        class="mt-4"
+      />
 
       <div class="card mt-4 divide-y divide-line">
         <button
@@ -258,8 +281,16 @@ async function remove() {
           <LinkifiedText v-if="description.trim()" :text="description" />
           <span v-else class="text-muted">Ajouter une description…</span>
         </div>
+        <RouterLink
+          v-if="!editingDescription && hasListLines(task.description)"
+          :to="{ name: 'subtasks-convert', params: { projectId, taskId } }"
+          class="mt-3 inline-flex items-center gap-2 text-sm font-semibold underline underline-offset-4"
+        >
+          <ListChecks :size="16" /> Transformer en sous-tâches
+        </RouterLink>
       </section>
 
+      <TaskSubtasks class="mt-7" :task-id="taskId" />
       <TaskPhotos class="mt-7" :task-id="taskId" />
       <TaskItems class="mt-7" :task-id="taskId" />
 

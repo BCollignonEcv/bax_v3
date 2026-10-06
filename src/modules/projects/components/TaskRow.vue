@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Check, Image, RotateCcw, ShoppingCart } from '@lucide/vue'
+import { Check, Image, ListChecks, RotateCcw, ShoppingCart } from '@lucide/vue'
 import Avatars from '@/core/components/Avatars.vue'
 import { useProjectsStore } from '../stores/projects'
 import { usePhotosStore } from '../stores/photos'
 import { useItemsStore } from '../stores/items'
+import { useSubtasksStore } from '../stores/subtasks'
 import type { Task } from '../types'
 import PriorityBadge from './PriorityBadge.vue'
 import StatusToggle from './StatusToggle.vue'
@@ -18,6 +19,7 @@ const items = useItemsStore()
 
 const done = computed(() => props.task.status === 'done')
 const purchases = computed(() => items.purchaseProgress(props.task.id))
+const steps = computed(() => useSubtasksStore().progress(props.task.id))
 const photoCount = computed(() => photos.countOf(props.task.id))
 
 // ---------- Balayage vers la droite pour terminer ----------
@@ -127,6 +129,10 @@ function onClickCapture(event: MouseEvent) {
               En cours
             </span>
             <TaskDate v-if="task.target_date" :date="task.target_date" :done="done" />
+            <span v-if="steps.total" class="inline-flex items-center gap-1 text-[13px] text-ink-soft">
+              <ListChecks :size="14" />
+              {{ steps.done }}/{{ steps.total }} {{ steps.total > 1 ? 'étapes' : 'étape' }}
+            </span>
             <span v-if="purchases.total" class="inline-flex items-center gap-1 text-[13px] text-ink-soft">
               <ShoppingCart :size="14" />
               {{ purchases.done }}/{{ purchases.total }} {{ purchases.done > 1 ? 'achetés' : 'acheté' }}

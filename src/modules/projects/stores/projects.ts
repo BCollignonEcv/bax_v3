@@ -184,6 +184,19 @@ export const useProjectsStore = defineStore('projects', () => {
     return save(supabase.from('tasks').update(changes).eq('id', id))
   }
 
+  /**
+   * Statut prévu localement, sans écriture : la base l'applique elle-même (trigger des
+   * sous-tâches) et Realtime confirme. Sert à un affichage immédiat.
+   */
+  function predictStatus(id: string, status: Status) {
+    const current = tasks.get(id)
+    if (!current || current.status === status) return
+    tasks.patch(id, {
+      status,
+      completed_at: status === 'done' ? (current.completed_at ?? new Date().toISOString()) : null,
+    })
+  }
+
   /** Change le statut ; le passage à « Terminé » affiche le toast « Annuler ». */
   async function setStatus(id: string, status: Status) {
     const current = tasks.get(id)
@@ -278,6 +291,7 @@ export const useProjectsStore = defineStore('projects', () => {
     createTask,
     updateTask,
     setStatus,
+    predictStatus,
     toggleDone,
     archiveTask,
     restoreTask,

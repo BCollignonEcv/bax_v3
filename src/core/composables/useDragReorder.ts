@@ -9,38 +9,57 @@ interface Options {
   onReorder: (ids: string[]) => void
   /** Autorise le début du glissement (ex. : bloqué hors connexion). */
   canStart?: () => boolean
+  /**
+   * Délai d'appui avant le glissement (ms). 380 par défaut (appui long sur toute la carte) ;
+   * 0 pour une poignée dédiée, qui démarre le glissement immédiatement.
+   */
+  delay?: number
 }
 
 /**
- * Réorganisation d'une liste verticale : appui long puis glisser.
+ * Réorganisation d'une liste verticale : appui long puis glisser (ou poignée, avec delay: 0).
  * Le DOM ne bouge pas pendant le glissement ; les éléments sont décalés par translation.
  */
-export function useDragReorder({ refKey, ids, onReorder, canStart }: Options) {
+export function useDragReorder({ refKey, ids, onReorder, canStart, delay = 380 }: Options) {
   const elements = useTemplateRef<HTMLElement[]>(refKey)
-  const drag = reactive({ id: null as string | null, from: 0, to: 0, dy: 0 })
+  /**
+   * settling : vrai pendant l'image qui suit le lâcher. Les éléments doivent alors couper leur
+   * transition, sinon le retour du décalage à 0 s'anime alors qu'ils sont déjà à leur nouvelle
+   * place (petit saut visible).
+   */
+  const drag = reactive({ id: null as string | null, from: 0, to: 0, dy: 0, settling: false })
   let rects: DOMRect[] = []
   let gap = 12
   let timer: ReturnType<typeof setTimeout> | undefined
   let startX = 0
   let startY = 0
   let suppressClick = false
+  let suppressTimer: ReturnType<typeof setTimeout> | undefined
 
   function preventScroll(event: TouchEvent) {
     event.preventDefault()
   }
 
   function onPointerDown(event: PointerEvent, index: number) {
+    suppressClick = false // nouvel appui : le blocage d'un glissement précédent ne s'applique plus
     startX = event.clientX
     startY = event.clientY
     const target = event.currentTarget as HTMLElement
     const pointerId = event.pointerId
     clearTimeout(timer)
-    timer = setTimeout(() => begin(index, target, pointerId), 380)
+    if (delay === 0) {
+      event.preventDefault() // poignée : pas de sélection de texte ni de défilement
+      begin(index, target, pointerId)
+    } else {
+      timer = setTimeout(() => begin(index, target, pointerId), delay)
+    }
   }
 
   function begin(index: number, target: HTMLElement, pointerId: number) {
     if (canStart && !canStart()) return
-    rects = (elements.value ?? []).map((el) => el.getBoundingClientRect())
+    // Les références d'un v-for ne suivent pas forcément l'ordre affiché après un réordonnancement :
+    // on trie par position à l'écran pour que rects[i] corresponde bien à l'élément d'indice i.
+    rects = (elements.value ?? []).map((el) => el.getBoundingClientRect()).sort((a, b) => a.top - b.top)
     gap = rects.length > 1 ? rects[1]!.top - rects[0]!.bottom : 12
     Object.assign(drag, { id: ids()[index]!, from: index, to: index, dy: 0 })
     target.setPointerCapture?.(pointerId)
@@ -55,18 +74,28 @@ export function useDragReorder({ refKey, ids, onReorder, canStart }: Options) {
     }
     drag.dy = event.clientY - startY
     const from = rects[drag.from]!
-    const center = from.top + from.height / 2 + drag.dy
+    // Un voisin s'écarte dès qu'il est recouvert à moitié (bord de l'élément déplacé
+    // au-delà de son milieu) : sinon il disparaît dessous puis tout saute d'un coup.
+    const top = from.top + drag.dy
+    const bottom = from.bottom + drag.dy
     let to = drag.from
-    for (let j = drag.from + 1; j < rects.length; j++)
-      if (center > rects[j]!.top + rects[j]!.height / 2) to = j
-    for (let j = drag.from - 1; j >= 0; j--) if (center < rects[j]!.top + rects[j]!.height / 2) to = j
+    for (let j = drag.from + 1; j < rects.length; j++) {
+      if (bottom > rects[j]!.top + rects[j]!.height / 2) to = j
+    }
+    for (let j = drag.from - 1; j >= 0; j--) {
+      if (top < rects[j]!.top + rects[j]!.height / 2) to = j
+    }
     drag.to = to
   }
 
   function onPointerUp() {
     clearTimeout(timer)
     if (!drag.id) return
+    // Au doigt, le clic de fin de glissement n'arrive pas toujours : le blocage expire vite,
+    // sinon il avalerait le toucher suivant.
     suppressClick = true
+    clearTimeout(suppressTimer)
+    suppressTimer = setTimeout(() => (suppressClick = false), 400)
     document.removeEventListener('touchmove', preventScroll)
     if (drag.from !== drag.to) {
       const next = [...ids()]
@@ -74,7 +103,9 @@ export function useDragReorder({ refKey, ids, onReorder, canStart }: Options) {
       next.splice(drag.to, 0, moved!)
       onReorder(next)
     }
-    Object.assign(drag, { id: null, from: 0, to: 0, dy: 0 })
+    Object.assign(drag, { id: null, from: 0, to: 0, dy: 0, settling: true })
+    // Deux images : le nouvel ordre et le décalage à 0 sont appliqués sans animation.
+    requestAnimationFrame(() => requestAnimationFrame(() => (drag.settling = false)))
   }
 
   /** Décalage vertical à appliquer à l'élément d'indice `index`. */
@@ -98,6 +129,7 @@ export function useDragReorder({ refKey, ids, onReorder, canStart }: Options) {
 
   onBeforeUnmount(() => {
     clearTimeout(timer)
+    clearTimeout(suppressTimer)
     document.removeEventListener('touchmove', preventScroll)
   })
 
