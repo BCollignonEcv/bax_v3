@@ -1,9 +1,11 @@
-// Fichier généré par `npm run types:supabase` (supabase gen types typescript).
-// Ne pas modifier à la main : régénérer après chaque migration.
-
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: '14.18'
+  }
   public: {
     Tables: {
       profiles: {
@@ -71,8 +73,63 @@ export type Database = {
           },
         ]
       }
+      shopping_item_options: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          image_path: string | null
+          item_id: string
+          label: string | null
+          note: string | null
+          position: number
+          price: number | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          image_path?: string | null
+          item_id: string
+          label?: string | null
+          note?: string | null
+          position?: number
+          price?: number | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          image_path?: string | null
+          item_id?: string
+          label?: string | null
+          note?: string | null
+          position?: number
+          price?: number | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'shopping_item_options_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'shopping_item_options_item_id_fkey'
+            columns: ['item_id']
+            isOneToOne: false
+            referencedRelation: 'shopping_items'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       shopping_items: {
         Row: {
+          chosen_option_id: string | null
           created_at: string
           id: string
           name: string
@@ -82,6 +139,7 @@ export type Database = {
           quantity: number | null
         }
         Insert: {
+          chosen_option_id?: string | null
           created_at?: string
           id?: string
           name: string
@@ -91,6 +149,7 @@ export type Database = {
           quantity?: number | null
         }
         Update: {
+          chosen_option_id?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -99,7 +158,15 @@ export type Database = {
           purchased?: boolean
           quantity?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'shopping_items_chosen_option_fkey'
+            columns: ['chosen_option_id', 'id']
+            isOneToOne: false
+            referencedRelation: 'shopping_item_options'
+            referencedColumns: ['id', 'item_id']
+          },
+        ]
       }
       task_photos: {
         Row: {
@@ -130,6 +197,13 @@ export type Database = {
           task_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: 'task_photos_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
           {
             foreignKeyName: 'task_photos_task_id_fkey'
             columns: ['task_id']
@@ -217,6 +291,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: 'tasks_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
             foreignKeyName: 'tasks_project_id_fkey'
             columns: ['project_id']
             isOneToOne: false
@@ -230,10 +311,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      reorder_projects: {
-        Args: { ids: string[] }
-        Returns: undefined
-      }
+      reorder_projects: { Args: { ids: string[] }; Returns: undefined }
     }
     Enums: {
       task_priority: 'high' | 'medium' | 'low'
@@ -245,9 +323,121 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database['public']
+type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
 
-export type Tables<T extends keyof PublicSchema['Tables']> = PublicSchema['Tables'][T]['Row']
-export type TablesInsert<T extends keyof PublicSchema['Tables']> = PublicSchema['Tables'][T]['Insert']
-export type TablesUpdate<T extends keyof PublicSchema['Tables']> = PublicSchema['Tables'][T]['Update']
-export type Enums<T extends keyof PublicSchema['Enums']> = PublicSchema['Enums'][T]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    keyof (DefaultSchema['Tables'] & DefaultSchema['Views']) | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    keyof DefaultSchema['Tables'] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    keyof DefaultSchema['Tables'] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    keyof DefaultSchema['Enums'] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
+    : never) = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
+    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    keyof DefaultSchema['CompositeTypes'] | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
+    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      task_priority: ['high', 'medium', 'low'],
+      task_status: ['todo', 'in_progress', 'done'],
+    },
+  },
+} as const

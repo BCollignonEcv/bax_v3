@@ -55,8 +55,29 @@ Dans **SQL Editor**, coller et exécuter le contenu de
 - l'activation de **Realtime** sur toutes les tables ;
 - le **bucket privé `task-photos`** (JPEG, 5 Mo max) et ses politiques, réservées aux utilisateurs connectés.
 
+Exécuter ensuite, de la même façon, les migrations suivantes, dans l'ordre :
+
+- [`0002_item_options.sql`](supabase/migrations/0002_item_options.sql) : options d'achat (liens) des articles
+  (table `shopping_item_options`, colonne `shopping_items.chosen_option_id`, RLS et Realtime) ;
+- [`0003_option_images.sql`](supabase/migrations/0003_option_images.sql) : image d'aperçu des options
+  (colonne `image_path`).
+
+### 2.2 bis Fonction `link-preview` (image et prix des liens)
+
+Le navigateur ne peut pas lire la page d'un autre site : une Edge Function le fait (réservée aux comptes
+connectés, adresses publiques uniquement, 8 s et 1,5 Mo maximum). À déployer une fois, puis après chaque
+modification de `supabase/functions/link-preview/` :
+
+```bash
+npx supabase login
+npx supabase link --project-ref <référence-du-projet>
+npx supabase functions deploy link-preview --no-verify-jwt
+```
+
+`--no-verify-jwt` est voulu : la fonction vérifie elle-même l'utilisateur (compatible avec les nouvelles clés API).
+
 > Vérification : dans **Storage**, le bucket `task-photos` apparaît avec « Private ». Dans
-> **Database > Publications > supabase_realtime**, les six tables sont cochées.
+> **Database > Publications > supabase_realtime**, toutes les tables sont cochées.
 
 ### 2.3 Désactiver les inscriptions
 
@@ -167,6 +188,21 @@ Se connecter une fois : la session reste ouverte sur l'appareil.
   - l'état « acheté » est porté par l'article, partagé entre les tâches qui l'utilisent ;
   - le prix saisi est celui de la ligne, quantité comprise ;
   - le budget d'un projet compte chaque article une seule fois.
+- **Options d'un article** :
+  - chaque article peut avoir plusieurs options d'achat (lien http/https obligatoire, libellé, prix, note) ;
+  - on peut en retenir une, changer de choix ou annuler le choix ; les options se réordonnent par appui long
+    puis glisser ;
+  - les options et le choix sont portés par l'article, donc partagés entre ses tâches ;
+  - prix affiché : option retenue, sinon prix propre de l'article, sinon « à partir de » l'option la moins
+    chère ;
+  - à l'ajout d'une option, l'image et le prix sont lus sur la page du lien (le prix ne remplace jamais un prix
+    déjà saisi) ; l'image est réduite en miniature JPEG et copiée dans le Storage (`options/`). Certains sites
+    (Amazon notamment) bloquent cette lecture : l'option reste alors sans image ;
+  - prix compté dans les totaux (budget, tâche, liste de courses) : même règle, mais avec l'option **la plus
+    chère** quand rien n'est retenu ni saisi.
+- **Liens** : dans les descriptions de tâches et les notes (articles, options), les adresses `http(s)://…` et
+  `www.…` deviennent cliquables (domaine affiché, ouverture dans un nouvel onglet). Le texte n'est jamais
+  interprété comme du HTML.
 - **Liste de courses** : propre à chaque projet (icône panier sur l'écran du projet). Elle montre les
   articles non achetés reliés à une tâche non terminée et non archivée.
 - **Saisie rapide** : « Chevilles ×20 » crée l'article « Chevilles » avec la quantité 20.

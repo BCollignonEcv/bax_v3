@@ -9,6 +9,7 @@ import { useToastStore } from '@/core/stores/toast'
 import type { TablesInsert, TablesUpdate } from '@/types/database'
 import type { Project, Status, Task } from '../types'
 import { usePhotosStore } from './photos'
+import { useItemsStore } from './items'
 
 type ProjectInput = Pick<Project, 'name' | 'icon' | 'color' | 'target_date' | 'description'>
 
@@ -141,6 +142,7 @@ export const useProjectsStore = defineStore('projects', () => {
       commit: async () => {
         const taskIds = tasks.all.value.filter((t) => t.project_id === id).map((t) => t.id)
         await usePhotosStore().removeFilesForTasks(taskIds)
+        await useItemsStore().removeOptionImagesForTasks(taskIds)
         const ok = await save(supabase.from('projects').delete().eq('id', id))
         if (ok) {
           taskIds.forEach((taskId) => tasks.remove(taskId))
@@ -245,6 +247,7 @@ export const useProjectsStore = defineStore('projects', () => {
       undo: () => hidden.value.delete(id),
       commit: async () => {
         await usePhotosStore().removeFilesForTasks([id])
+        await useItemsStore().removeOptionImagesForTasks([id])
         const ok = await save(supabase.from('tasks').delete().eq('id', id))
         if (ok) tasks.remove(id)
         hidden.value.delete(id)

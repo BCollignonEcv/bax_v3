@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Archive, Check, ChevronLeft, ChevronRight, Ellipsis, RotateCcw, Trash2 } from '@lucide/vue'
+import { Archive, Check, ChevronLeft, ChevronRight, Ellipsis, Pencil, RotateCcw, Trash2 } from '@lucide/vue'
 import AutoTextarea from '@/core/components/AutoTextarea.vue'
 import Avatars from '@/core/components/Avatars.vue'
 import BottomSheet from '@/core/components/BottomSheet.vue'
 import EmptyState from '@/core/components/EmptyState.vue'
 import IconButton from '@/core/components/IconButton.vue'
+import LinkifiedText from '@/core/components/LinkifiedText.vue'
 import OfflineNotice from '@/core/components/OfflineNotice.vue'
 import SegmentedControl from '@/core/components/SegmentedControl.vue'
 import SheetAction from '@/core/components/SheetAction.vue'
@@ -62,7 +63,19 @@ function saveTitle() {
   else if (value !== task.value?.title) void store.updateTask(props.taskId, { title: value })
 }
 
+// Description : affichée avec ses liens cliquables, modifiable en la touchant.
+const editingDescription = ref(false)
+const descriptionInput = ref<{ $el: HTMLTextAreaElement }>()
+
+async function editDescription() {
+  if (!network.requireOnline()) return
+  editingDescription.value = true
+  await nextTick()
+  descriptionInput.value?.$el.focus()
+}
+
 function saveDescription() {
+  editingDescription.value = false
   const value = description.value.trim() || null
   if (value !== (task.value?.description ?? null)) void store.updateTask(props.taskId, { description: value })
 }
@@ -212,15 +225,39 @@ async function remove() {
       </div>
 
       <section class="mt-7">
-        <h2 class="text-xl font-bold">Description</h2>
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-bold">Description</h2>
+          <!-- Toujours accessible, même si la description n'est qu'un lien -->
+          <IconButton
+            v-if="!editingDescription && description.trim()"
+            label="Modifier la description"
+            class="-my-2 -mr-2 text-ink-soft"
+            @click="editDescription"
+          >
+            <Pencil :size="18" />
+          </IconButton>
+        </div>
         <AutoTextarea
+          v-if="editingDescription"
+          ref="descriptionInput"
           v-model="description"
           class="mt-2 w-full bg-transparent text-[16px] leading-relaxed outline-none placeholder:text-muted"
           placeholder="Ajouter une description…"
           aria-label="Description"
-          :readonly="!network.online"
           @blur="saveDescription"
         />
+        <div
+          v-else
+          role="button"
+          tabindex="0"
+          class="mt-2 min-h-7 cursor-text text-[16px] leading-relaxed"
+          aria-label="Modifier la description"
+          @click="editDescription"
+          @keydown.enter.self="editDescription"
+        >
+          <LinkifiedText v-if="description.trim()" :text="description" />
+          <span v-else class="text-muted">Ajouter une description…</span>
+        </div>
       </section>
 
       <TaskPhotos class="mt-7" :task-id="taskId" />

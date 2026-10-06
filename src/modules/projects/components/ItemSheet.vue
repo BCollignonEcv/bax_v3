@@ -5,7 +5,13 @@ import BottomSheet from '@/core/components/BottomSheet.vue'
 import { parsePrice } from '../composables/itemName'
 import type { ItemInput } from '../stores/items'
 
-const props = defineProps<{ open: boolean; item: ItemInput | null; sharedCount?: number }>()
+const props = defineProps<{
+  open: boolean
+  item: ItemInput | null
+  sharedCount?: number
+  /** Masque « Retirer de la tâche » (fiche ouverte hors d'une tâche). */
+  hideRemove?: boolean
+}>()
 const emit = defineEmits<{ close: []; save: [values: ItemInput]; remove: [] }>()
 
 const form = reactive({ name: '', quantity: '', price: '', note: '' })
@@ -60,6 +66,7 @@ function submit() {
       </p>
       <button type="submit" class="btn-primary w-full">Enregistrer</button>
       <button
+        v-if="!hideRemove"
         type="button"
         class="flex w-full items-center justify-center gap-2 py-3 font-semibold text-ink-soft"
         @click="emit('remove')"

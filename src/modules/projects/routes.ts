@@ -44,4 +44,15 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('./views/TaskView.vue'),
     props: true,
   },
+  {
+    path: '/projets/:projectId/articles/:itemId',
+    name: 'item',
+    component: () => import('./views/ItemView.vue'),
+    // ?tache=<id> : fiche ouverte depuis une tâche (permet « Retirer de la tâche »).
+    props: (route) => ({
+      projectId: route.params.projectId,
+      itemId: route.params.itemId,
+      tache: typeof route.query.tache === 'string' ? route.query.tache : undefined,
+    }),
+  },
 ]

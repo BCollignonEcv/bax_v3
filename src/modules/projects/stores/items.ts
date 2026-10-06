@@ -8,6 +8,7 @@ import { useNetworkStore } from '@/core/stores/network'
 import { useToastStore } from '@/core/stores/toast'
 import type { TablesUpdate } from '@/types/database'
 import { linkKey, type ShoppingItem, type TaskItemLink } from '../types'
+import { useOptionsStore } from './options'
 import { useProjectsStore } from './projects'
 
 export type ItemInput = Pick<ShoppingItem, 'name' | 'quantity' | 'price' | 'note'>
@@ -31,6 +32,7 @@ export const useItemsStore = defineStore('items', () => {
   const network = useNetworkStore()
   const toast = useToastStore()
   const projectsStore = useProjectsStore()
+  const optionsStore = useOptionsStore()
 
   const visibleLinks = computed(() => links.all.value.filter((l) => !hiddenLinks.value.has(linkKey(l))))
 
@@ -69,8 +71,49 @@ export const useItemsStore = defineStore('items', () => {
     return { done: list.filter((i) => i.purchased).length, total: list.length }
   }
 
+  // ---------- Prix ----------
+
+  /** Option retenue (ignorée si elle est en cours de suppression). */
+  function chosenOption(item: ShoppingItem) {
+    return optionsStore.option(item.chosen_option_id)
+  }
+
+  /** « N options » et fourchette de prix des options d'un article. */
+  function optionsSummary(itemId: string) {
+    const list = optionsStore.optionsOf(itemId)
+    const prices = list.flatMap((o) => (o.price != null ? [Number(o.price)] : []))
+    return {
+      count: list.length,
+      min: prices.length ? Math.min(...prices) : null,
+      max: prices.length ? Math.max(...prices) : null,
+    }
+  }
+
+  /**
+   * Prix affiché : celui de l'option retenue, sinon le prix propre de l'article,
+   * sinon l'option la moins chère (« à partir de »).
+   */
+  function displayPrice(item: ShoppingItem): { amount: number | null; from: boolean } {
+    const chosen = chosenOption(item)
+    if (chosen?.price != null) return { amount: Number(chosen.price), from: false }
+    if (item.price != null) return { amount: Number(item.price), from: false }
+    const { min } = optionsSummary(item.id)
+    return { amount: min, from: min != null }
+  }
+
+  /**
+   * Prix compté dans les totaux (budget, liste de courses) : même règle, mais un article
+   * sans option retenue ni prix propre compte pour son option la plus chère.
+   */
+  function budgetPrice(item: ShoppingItem): number {
+    const chosen = chosenOption(item)
+    if (chosen?.price != null) return Number(chosen.price)
+    if (item.price != null) return Number(item.price)
+    return optionsSummary(item.id).max ?? 0
+  }
+
   function sumPrices(list: ShoppingItem[]) {
-    return list.reduce((sum, i) => sum + Number(i.price ?? 0), 0)
+    return list.reduce((sum, i) => sum + budgetPrice(i), 0)
   }
 
   function totalsOfTask(taskId: string) {
@@ -191,6 +234,11 @@ export const useItemsStore = defineStore('items', () => {
     return save(supabase.from('shopping_items').update(changes).eq('id', id))
   }
 
+  /** Retient une option (ou annule le choix avec null). */
+  function chooseOption(itemId: string, optionId: string | null) {
+    return updateItem(itemId, { chosen_option_id: optionId })
+  }
+
   /** Coche / décoche un article ; `withToast` pour la liste de courses (l'article en disparaît). */
   async function togglePurchased(id: string, withToast = false) {
     const current = items.get(id)
@@ -217,6 +265,9 @@ export const useItemsStore = defineStore('items', () => {
       icon: 'trash',
       undo: () => hiddenLinks.value.delete(key),
       commit: async () => {
+        // Dernier lien : l'article et ses options seront supprimés en cascade, avec leurs images.
+        const lastLink = !links.all.value.some((l) => l.item_id === itemId && l.task_id !== taskId)
+        if (lastLink) await optionsStore.removeImagesOfItems([itemId])
         const ok = await save(
           supabase.from('task_shopping_items').delete().eq('task_id', taskId).eq('item_id', itemId),
         )
@@ -229,10 +280,25 @@ export const useItemsStore = defineStore('items', () => {
     })
   }
 
+  /** Avant de supprimer des tâches : images des options des articles qui n'auront plus de tâche. */
+  async function removeOptionImagesForTasks(taskIds: string[]) {
+    const deleted = new Set(taskIds)
+    const itemIds = new Set(links.all.value.filter((l) => deleted.has(l.task_id)).map((l) => l.item_id))
+    const orphans = [...itemIds].filter((itemId) =>
+      links.all.value.every((l) => l.item_id !== itemId || deleted.has(l.task_id)),
+    )
+    await optionsStore.removeImagesOfItems(orphans)
+  }
+
   return {
     itemsByKey: items.byKey,
     linksByKey: links.byKey,
     item,
+    chosenOption,
+    optionsSummary,
+    displayPrice,
+    budgetPrice,
+    sumPrices,
     itemsOfTask,
     taskIdsOfItem,
     purchaseProgress,
@@ -245,6 +311,8 @@ export const useItemsStore = defineStore('items', () => {
     createItemForTask,
     updateItem,
     togglePurchased,
+    chooseOption,
     unlinkItem,
+    removeOptionImagesForTasks,
   }
 })

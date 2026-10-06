@@ -7,8 +7,13 @@ const moneyRound = new Intl.NumberFormat('fr-FR', {
   maximumFractionDigits: 0,
 })
 
+/**
+ * « 249 € », « 8,90 € » : pas de centimes pour un montant rond.
+ * `round` arrondit à l'euro (budgets des projets).
+ */
 export function formatMoney(value: number, round = false) {
-  return (round ? moneyRound : money).format(value)
+  const whole = Math.round(value * 100) % 100 === 0
+  return (round || whole ? moneyRound : money).format(value)
 }
 
 /** Date « AAAA-MM-JJ » (colonne date) → Date locale à minuit. */

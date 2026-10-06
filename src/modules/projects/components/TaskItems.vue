@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { formatMoney } from '@/core/format'
 import { useNetworkStore } from '@/core/stores/network'
 import { parseItemName } from '../composables/itemName'
@@ -14,6 +15,7 @@ const props = defineProps<{ taskId: string }>()
 const items = useItemsStore()
 const projects = useProjectsStore()
 const network = useNetworkStore()
+const router = useRouter()
 
 const list = computed(() => items.itemsOfTask(props.taskId))
 const progress = computed(() => items.purchaseProgress(props.taskId))
@@ -45,6 +47,13 @@ async function save(values: ItemInput) {
   if (await items.updateItem(editingId.value, values)) editingId.value = null
 }
 
+/** Fiche de l'article (options, note…), en gardant la tâche d'origine. */
+function openItem(itemId: string) {
+  const projectId = projects.task(props.taskId)?.project_id
+  if (!projectId) return
+  router.push({ name: 'item', params: { projectId, itemId }, query: { tache: props.taskId } })
+}
+
 function remove() {
   if (!editingId.value) return
   items.unlinkItem(props.taskId, editingId.value)
@@ -66,12 +75,14 @@ function remove() {
         :key="item.id"
         :name="item.name"
         :quantity="item.quantity"
-        :price="item.price"
+        :price="items.displayPrice(item).amount"
+        :from-price="items.displayPrice(item).from"
         :note="item.note"
         :purchased="item.purchased"
+        :item-id="item.id"
         :also-for="alsoFor(item.id)"
         @toggle="items.togglePurchased(item.id)"
-        @open="editingId = item.id"
+        @open="openItem(item.id)"
       />
       <ItemAdder
         :task-id="taskId"

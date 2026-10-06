@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Archive, ChevronRight, ListChecks, Plus } from '@lucide/vue'
 import EmptyState from '@/core/components/EmptyState.vue'
@@ -9,6 +9,7 @@ import OfflineNotice from '@/core/components/OfflineNotice.vue'
 import PageBar from '@/core/components/PageBar.vue'
 import PageShell from '@/core/components/PageShell.vue'
 import { useNetworkStore } from '@/core/stores/network'
+import { useDragReorder } from '@/core/composables/useDragReorder'
 import ProjectCard from '../components/ProjectCard.vue'
 import { useProjectsStore } from '../stores/projects'
 import { PROJECT_TEMPLATES } from '../types'
@@ -20,86 +21,11 @@ const router = useRouter()
 const projects = computed(() => store.activeProjects)
 
 // ---------- Réorganisation : appui long puis glisser ----------
-const cards = ref<HTMLElement[]>([])
-const drag = reactive({ id: null as string | null, from: 0, to: 0, dy: 0 })
-let rects: DOMRect[] = []
-let gap = 12
-let timer: ReturnType<typeof setTimeout> | undefined
-let startX = 0
-let startY = 0
-let suppressClick = false
-
-function preventScroll(event: TouchEvent) {
-  event.preventDefault()
-}
-
-function onPointerDown(event: PointerEvent, index: number) {
-  startX = event.clientX
-  startY = event.clientY
-  const target = event.currentTarget as HTMLElement
-  const pointerId = event.pointerId
-  clearTimeout(timer)
-  timer = setTimeout(() => begin(index, target, pointerId), 380)
-}
-
-function begin(index: number, target: HTMLElement, pointerId: number) {
-  if (!network.requireOnline()) return
-  rects = cards.value.map((el) => el.getBoundingClientRect())
-  gap = rects.length > 1 ? rects[1]!.top - rects[0]!.bottom : 12
-  Object.assign(drag, { id: projects.value[index]!.id, from: index, to: index, dy: 0 })
-  target.setPointerCapture?.(pointerId)
-  document.addEventListener('touchmove', preventScroll, { passive: false })
-  navigator.vibrate?.(10)
-}
-
-function onPointerMove(event: PointerEvent) {
-  if (!drag.id) {
-    if (Math.abs(event.clientX - startX) > 8 || Math.abs(event.clientY - startY) > 8) clearTimeout(timer)
-    return
-  }
-  drag.dy = event.clientY - startY
-  const from = rects[drag.from]!
-  const center = from.top + from.height / 2 + drag.dy
-  let to = drag.from
-  for (let j = drag.from + 1; j < rects.length; j++) if (center > rects[j]!.top + rects[j]!.height / 2) to = j
-  for (let j = drag.from - 1; j >= 0; j--) if (center < rects[j]!.top + rects[j]!.height / 2) to = j
-  drag.to = to
-}
-
-function onPointerUp() {
-  clearTimeout(timer)
-  if (!drag.id) return
-  suppressClick = true
-  document.removeEventListener('touchmove', preventScroll)
-  if (drag.from !== drag.to) {
-    const ids = projects.value.map((p) => p.id)
-    const [moved] = ids.splice(drag.from, 1)
-    ids.splice(drag.to, 0, moved!)
-    void store.reorderProjects(ids)
-  }
-  Object.assign(drag, { id: null, from: 0, to: 0, dy: 0 })
-}
-
-function shift(index: number) {
-  if (!drag.id) return 0
-  if (index === drag.from) return drag.dy
-  const size = rects[drag.from]!.height + gap
-  if (drag.from < drag.to && index > drag.from && index <= drag.to) return -size
-  if (drag.to < drag.from && index >= drag.to && index < drag.from) return size
-  return 0
-}
-
-function onClickCapture(event: MouseEvent) {
-  if (suppressClick) {
-    event.preventDefault()
-    event.stopPropagation()
-    suppressClick = false
-  }
-}
-
-onBeforeUnmount(() => {
-  clearTimeout(timer)
-  document.removeEventListener('touchmove', preventScroll)
+const { drag, onPointerDown, onPointerMove, onPointerUp, onClickCapture, shift } = useDragReorder({
+  refKey: 'cards',
+  ids: () => projects.value.map((p) => p.id),
+  onReorder: (ids) => void store.reorderProjects(ids),
+  canStart: () => network.requireOnline(),
 })
 </script>
 

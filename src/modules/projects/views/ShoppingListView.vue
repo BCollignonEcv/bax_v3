@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { Link, ShoppingCart } from '@lucide/vue'
 import CheckBox from '@/core/components/CheckBox.vue'
 import EmptyState from '@/core/components/EmptyState.vue'
+import LinkifiedText from '@/core/components/LinkifiedText.vue'
 import OfflineNotice from '@/core/components/OfflineNotice.vue'
 import PageBar from '@/core/components/PageBar.vue'
 import PageShell from '@/core/components/PageShell.vue'
 import { formatMoney, plural } from '@/core/format'
+import ItemOptionsLine from '../components/ItemOptionsLine.vue'
 import { useItemsStore } from '../stores/items'
 import { useProjectsStore } from '../stores/projects'
 
@@ -14,10 +17,16 @@ const props = defineProps<{ projectId: string }>()
 
 const store = useProjectsStore()
 const items = useItemsStore()
+const router = useRouter()
 
 const project = computed(() => store.project(props.projectId))
 const list = computed(() => items.shoppingList(props.projectId))
-const estimated = computed(() => list.value.reduce((sum, { item }) => sum + Number(item.price ?? 0), 0))
+// Même règle de prix que le budget du projet (option retenue, prix propre, sinon la plus chère).
+const estimated = computed(() => items.sumPrices(list.value.map(({ item }) => item)))
+
+function openItem(itemId: string) {
+  router.push({ name: 'item', params: { projectId: props.projectId, itemId } })
+}
 
 function taskTitle(id: string) {
   return store.task(id)?.title ?? ''
@@ -52,17 +61,26 @@ function taskTitle(id: string) {
           :label="`Acheté : ${item.name}`"
           @click="items.togglePurchased(item.id, true)"
         />
-        <div class="min-w-0 flex-1 pt-2.5">
+        <!-- Zone cliquable vers la fiche (pas un lien : elle contient des liens) -->
+        <div
+          role="button"
+          tabindex="0"
+          class="min-w-0 flex-1 cursor-pointer pt-2.5"
+          @click="openItem(item.id)"
+          @keydown.enter.self="openItem(item.id)"
+        >
           <p class="font-semibold">
             {{ item.name
             }}<span v-if="item.quantity" class="font-normal text-ink-soft"> ×{{ item.quantity }}</span>
           </p>
-          <p v-if="item.note" class="text-sm text-ink-soft">{{ item.note }}</p>
+          <ItemOptionsLine :item-id="item.id" />
+          <LinkifiedText v-if="item.note" :text="item.note" tag="p" class="text-sm text-ink-soft" />
           <RouterLink
             v-for="(taskId, i) in taskIds"
             :key="taskId"
             :to="{ name: 'task', params: { projectId, taskId } }"
             class="text-sm font-semibold text-ink-soft"
+            @click.stop
           >
             {{ taskTitle(taskId) }}<template v-if="i < taskIds.length - 1"> · </template>
           </RouterLink>
@@ -73,9 +91,16 @@ function taskTitle(id: string) {
             <Link :size="12" /> {{ taskIds.length }} tâches
           </span>
         </div>
-        <span v-if="item.price != null" class="pt-2.5 font-bold whitespace-nowrap">{{
-          formatMoney(Number(item.price))
-        }}</span>
+        <span
+          v-if="items.displayPrice(item).amount != null"
+          class="cursor-pointer pt-2.5 text-right font-bold whitespace-nowrap"
+          @click="openItem(item.id)"
+        >
+          <span v-if="items.displayPrice(item).from" class="block text-xs font-semibold text-ink-soft"
+            >à partir de</span
+          >
+          {{ formatMoney(items.displayPrice(item).amount!) }}
+        </span>
       </div>
     </TransitionGroup>
   </PageShell>
