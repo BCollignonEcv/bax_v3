@@ -62,7 +62,9 @@ Exécuter ensuite, de la même façon, les migrations suivantes, dans l'ordre :
 - [`0003_option_images.sql`](supabase/migrations/0003_option_images.sql) : image d'aperçu des options
   (colonne `image_path`) ;
 - [`0004_subtasks.sql`](supabase/migrations/0004_subtasks.sql) : sous-tâches (table `task_subtasks`, triggers de
-  validation automatique, RLS et Realtime).
+  validation automatique, RLS et Realtime) ;
+- [`0005_subtasks_start_task.sql`](supabase/migrations/0005_subtasks_start_task.sql) : cocher une sous-tâche passe
+  la tâche « en cours ».
 
 ### 2.2 bis Fonction `link-preview` (image et prix des liens)
 
@@ -206,7 +208,8 @@ Se connecter une fois : la session reste ouverte sur l'appareil.
   - section entre la description et les photos ; ajout rapide (Entrée garde le focus), modification du texte en
     le touchant, suppression par balayage vers la gauche (« Annuler »), réorganisation par la poignée ⠿ ;
   - validation automatique, appliquée par la base (trigger) pour rester cohérente entre les deux téléphones :
-    cocher la dernière étape termine la tâche (« Annuler » décoche l'étape et rétablit le statut d'avant) ;
+    cocher une étape passe une tâche « À faire » en « En cours » ; cocher la dernière étape termine la tâche
+    (« Annuler » décoche l'étape et rétablit le statut d'avant) ;
     décocher une étape, ou ajouter une étape non cochée, remet une tâche terminée « en cours ». Supprimer une
     étape ou créer des étapes déjà cochées ne termine jamais la tâche ; terminer une tâche à la main reste possible ;
   - « Transformer en sous-tâches » sous une description contenant des lignes de liste (`-`, `*`, `•`, `✓`,

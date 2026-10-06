@@ -119,7 +119,7 @@ export const useSubtasksStore = defineStore('subtasks', () => {
   }
 
   /**
-   * Cocher la dernière étape termine la tâche (toast « Annuler ») ;
+   * Cocher une étape démarre une tâche « À faire » ; cocher la dernière la termine (toast « Annuler ») ;
    * décocher une étape d'une tâche terminée la remet « en cours ».
    */
   async function toggle(id: string) {
@@ -132,6 +132,8 @@ export const useSubtasksStore = defineStore('subtasks', () => {
 
     const completesTask = done && previous !== 'done' && allOf(task.id).every((s) => s.id === id || s.done)
     if (completesTask) projects.predictStatus(task.id, 'done')
+    else if (done && previous === 'todo')
+      projects.predictStatus(task.id, 'in_progress') // la tâche démarre
     else if (!done) predictReopen(task.id)
 
     const ok = await setDone(id, done)

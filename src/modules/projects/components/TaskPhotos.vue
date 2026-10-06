@@ -30,14 +30,6 @@ function openSheet() {
           · {{ photos.length }}</span
         >
       </h2>
-      <button
-        v-if="photos.length || uploads.length"
-        type="button"
-        class="btn-secondary rounded-full"
-        @click="openSheet"
-      >
-        <Plus :size="18" /> Ajouter une photo
-      </button>
     </div>
 
     <div v-if="photos.length || uploads.length" class="grid grid-cols-3 gap-2">
