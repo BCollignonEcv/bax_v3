@@ -5,9 +5,11 @@ import ExternalLink from '@/core/components/ExternalLink.vue'
 import { formatMoney } from '@/core/format'
 import { displayDomain } from '@/core/url'
 import { useItemsStore } from '../stores/items'
-import OptionThumb from './OptionThumb.vue'
 
-/** Ligne « option retenue » ou « N options · de X à Y » sous le nom d'un article. */
+/**
+ * Ligne « option retenue » ou « N options · de X à Y » sous le nom d'un article.
+ * La vignette de l'option retenue est affichée par la ligne parente (ItemThumb).
+ */
 const props = defineProps<{ itemId: string }>()
 
 const items = useItemsStore()
@@ -23,12 +25,9 @@ const range = computed(() => {
 </script>
 
 <template>
-  <span v-if="chosen" class="flex items-center gap-2 text-sm text-ink-soft">
-    <OptionThumb v-if="chosen.image_path" :path="chosen.image_path" class="size-7 rounded-md" />
-    <span class="min-w-0">
-      <template v-if="chosen.label?.trim()">{{ chosen.label }} · </template>
-      <ExternalLink :href="chosen.url">{{ displayDomain(chosen.url) }}</ExternalLink>
-    </span>
+  <span v-if="chosen" class="block text-sm text-ink-soft">
+    <template v-if="chosen.label?.trim()">{{ chosen.label }} · </template>
+    <ExternalLink :href="chosen.url">{{ displayDomain(chosen.url) }}</ExternalLink>
   </span>
   <span v-else-if="summary.count" class="flex items-center gap-1.5 text-sm font-semibold text-ink-soft">
     <Layers :size="14" class="shrink-0" />

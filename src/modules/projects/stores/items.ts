@@ -78,6 +78,12 @@ export const useItemsStore = defineStore('items', () => {
     return optionsStore.option(item.chosen_option_id)
   }
 
+  /** Image de l'option retenue d'un article (vignette des listes), ou null. */
+  function chosenImagePath(itemId: string) {
+    const current = items.get(itemId)
+    return current ? (chosenOption(current)?.image_path ?? null) : null
+  }
+
   /** « N options » et fourchette de prix des options d'un article. */
   function optionsSummary(itemId: string) {
     const list = optionsStore.optionsOf(itemId)
@@ -295,6 +301,7 @@ export const useItemsStore = defineStore('items', () => {
     linksByKey: links.byKey,
     item,
     chosenOption,
+    chosenImagePath,
     optionsSummary,
     displayPrice,
     budgetPrice,

@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Link } from '@lucide/vue'
 import CheckBox from '@/core/components/CheckBox.vue'
 import LinkifiedText from '@/core/components/LinkifiedText.vue'
 import { formatMoney } from '@/core/format'
 import ItemOptionsLine from './ItemOptionsLine.vue'
+import ItemThumb from './ItemThumb.vue'
+import { useItemsStore } from '../stores/items'
 
-defineProps<{
+const props = defineProps<{
   name: string
   quantity: number | null
   /** Prix affiché (prix effectif pour un article enregistré). */
@@ -21,10 +24,16 @@ defineProps<{
   disabledCheck?: boolean
 }>()
 const emit = defineEmits<{ toggle: []; open: [] }>()
+
+const items = useItemsStore()
+/** Avec vignette : texte et prix en haut, à côté de l'image ; sans : centrés sur la case. */
+const align = computed(() =>
+  props.itemId && items.chosenImagePath(props.itemId) ? 'self-start' : 'self-center',
+)
 </script>
 
 <template>
-  <div class="flex items-start gap-1 py-2 pr-4 pl-1">
+  <div class="flex items-center gap-1 py-2 pr-4 pl-1">
     <CheckBox
       :checked="purchased"
       :label="`Acheté : ${name}`"
@@ -36,13 +45,14 @@ const emit = defineEmits<{ toggle: []; open: [] }>()
     <div
       role="button"
       tabindex="0"
-      class="flex min-w-0 flex-1 cursor-pointer items-start gap-3 pt-2.5 text-left"
+      class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch text-left"
       @click="emit('open')"
       @keydown.enter.self="emit('open')"
     >
-      <span class="min-w-0 flex-1">
+      <ItemThumb v-if="itemId" :item-id="itemId" />
+      <span class="min-w-0 flex-1 py-1" :class="align">
         <span class="block font-semibold" :class="purchased && 'text-ink-soft line-through'">
-          {{ name }}<span v-if="quantity" class="font-normal"> ×{{ quantity }}</span>
+          {{ name }}<span v-if="quantity && quantity > 1" class="font-normal"> ×{{ quantity }}</span>
         </span>
         <ItemOptionsLine v-if="itemId" :item-id="itemId" />
         <LinkifiedText v-if="note" :text="note" class="block text-sm text-ink-soft" />
@@ -54,7 +64,7 @@ const emit = defineEmits<{ toggle: []; open: [] }>()
           <span>Aussi pour : {{ alsoFor.join(' · ') }}</span>
         </span>
       </span>
-      <span v-if="price != null" class="text-right font-bold whitespace-nowrap">
+      <span v-if="price != null" class="py-1 text-right font-bold whitespace-nowrap" :class="align">
         <span v-if="fromPrice" class="block text-xs font-semibold text-ink-soft">à partir de</span>
         {{ formatMoney(Number(price)) }}
       </span>

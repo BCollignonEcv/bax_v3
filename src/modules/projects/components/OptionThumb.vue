@@ -12,12 +12,13 @@ watch(src, () => (failed.value = false))
 </script>
 
 <template>
-  <span class="block shrink-0 overflow-hidden rounded-xl border border-line bg-white">
+  <!-- Image en position absolue : la taille vient du conteneur, jamais de l'image. -->
+  <span class="relative block shrink-0 overflow-hidden rounded-xl border border-line bg-white">
     <img
       v-if="src && !failed"
       :src="src"
       alt=""
-      class="size-full object-contain"
+      class="absolute inset-0 size-full object-contain"
       loading="lazy"
       draggable="false"
       @error="failed = true"

@@ -10,6 +10,7 @@ import PageBar from '@/core/components/PageBar.vue'
 import PageShell from '@/core/components/PageShell.vue'
 import { formatMoney, plural } from '@/core/format'
 import ItemOptionsLine from '../components/ItemOptionsLine.vue'
+import ItemThumb from '../components/ItemThumb.vue'
 import { useItemsStore } from '../stores/items'
 import { useProjectsStore } from '../stores/projects'
 
@@ -55,23 +56,27 @@ function taskTitle(id: string) {
     />
 
     <TransitionGroup v-else tag="div" name="list" class="card mt-5 divide-y divide-line overflow-hidden">
-      <div v-for="{ item, taskIds } in list" :key="item.id" class="flex items-start gap-1 py-3 pr-4 pl-1">
+      <div v-for="{ item, taskIds } in list" :key="item.id" class="flex items-center gap-1 py-3 pr-4 pl-1">
         <CheckBox
           :checked="item.purchased"
           :label="`Acheté : ${item.name}`"
           @click="items.togglePurchased(item.id, true)"
         />
+        <ItemThumb :item-id="item.id" class="mr-2 cursor-pointer" @click="openItem(item.id)" />
         <!-- Zone cliquable vers la fiche (pas un lien : elle contient des liens) -->
         <div
           role="button"
           tabindex="0"
-          class="min-w-0 flex-1 cursor-pointer pt-2.5"
+          class="min-w-0 flex-1 cursor-pointer py-1"
+          :class="items.chosenImagePath(item.id) ? 'self-start' : 'self-center'"
           @click="openItem(item.id)"
           @keydown.enter.self="openItem(item.id)"
         >
           <p class="font-semibold">
             {{ item.name
-            }}<span v-if="item.quantity" class="font-normal text-ink-soft"> ×{{ item.quantity }}</span>
+            }}<span v-if="item.quantity && item.quantity > 1" class="font-normal text-ink-soft">
+              ×{{ item.quantity }}</span
+            >
           </p>
           <ItemOptionsLine :item-id="item.id" />
           <LinkifiedText v-if="item.note" :text="item.note" tag="p" class="text-sm text-ink-soft" />
@@ -93,7 +98,8 @@ function taskTitle(id: string) {
         </div>
         <span
           v-if="items.displayPrice(item).amount != null"
-          class="cursor-pointer pt-2.5 text-right font-bold whitespace-nowrap"
+          class="cursor-pointer py-1 text-right font-bold whitespace-nowrap"
+          :class="items.chosenImagePath(item.id) ? 'self-start' : 'self-center'"
           @click="openItem(item.id)"
         >
           <span v-if="items.displayPrice(item).from" class="block text-xs font-semibold text-ink-soft"

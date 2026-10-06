@@ -67,7 +67,9 @@ function onBlur() {
           <div class="min-w-0 flex-1">
             <p class="font-semibold">
               {{ item.name
-              }}<span v-if="item.quantity" class="font-normal text-ink-soft"> ×{{ item.quantity }}</span>
+              }}<span v-if="item.quantity && item.quantity > 1" class="font-normal text-ink-soft">
+                ×{{ item.quantity }}</span
+              >
             </p>
             <p class="text-xs text-ink-soft">{{ usedBy(item.id) }}</p>
           </div>
