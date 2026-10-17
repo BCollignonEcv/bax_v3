@@ -200,8 +200,11 @@ Se connecter une fois : la session reste ouverte sur l'appareil.
   - prix affiché : option retenue, sinon prix propre de l'article, sinon « à partir de » l'option la moins
     chère ;
   - à l'ajout d'une option, l'image et le prix sont lus sur la page du lien (le prix ne remplace jamais un prix
-    déjà saisi) ; l'image est réduite en miniature JPEG et copiée dans le Storage (`options/`). Certains sites
-    (Amazon notamment) bloquent cette lecture : l'option reste alors sans image ;
+    déjà saisi) ; l'image est réduite en miniature JPEG et copiée dans le Storage (`options/`) ;
+  - si le site bloque la lecture (Amazon depuis les serveurs, La Redoute), la fonction demande l'image au service
+    gratuit Microlink (sans prix ; il ne reçoit que l'adresse du produit, ~50 appels par jour) ;
+  - pour tous les sites, « Coller l'image » (appui long sur la photo du produit, « Copier ») ou « Galerie »
+    ajoutent l'image à la main ; le prix se saisit alors à la main ;
   - prix compté dans les totaux (budget, tâche, liste de courses) : même règle, mais avec l'option **la plus
     chère** quand rien n'est retenu ni saisi.
 - **Sous-tâches** (un seul niveau) :

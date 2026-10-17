@@ -170,4 +170,3 @@ export function extract(html: string): Found {
 
   return { image, price: metaPrice ?? ld.price ?? itempropPrice ?? amazon.price }
 }
-

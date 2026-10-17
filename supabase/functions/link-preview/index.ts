@@ -83,6 +83,58 @@ async function readLimited(response: Response, limit: number, truncate = false):
   return out
 }
 
+// ---------- Lecture de la page et des images ----------
+
+async function readPage(url: string) {
+  try {
+    const page = await safeFetch(url, 'text/html,application/xhtml+xml')
+    if (!page) return null
+    const bytes = await readLimited(page, MAX_PAGE_BYTES, true)
+    const html = bytes ? new TextDecoder().decode(bytes) : ''
+    return {
+      found: extract(html),
+      base: page.url || url,
+      bytes: bytes?.length ?? 0,
+      antiRobot: /captcha|api-services-support@amazon|datadome|just a moment/i.test(html.slice(0, 20000)),
+    }
+  } catch (error) {
+    console.error('link-preview page', url, error)
+    return null
+  }
+}
+
+async function fetchImage(imageUrl: string): Promise<{ base64: string; contentType: string } | null> {
+  try {
+    const response = await safeFetch(imageUrl, 'image/avif,image/webp,image/png,image/jpeg,*/*;q=0.5')
+    const contentType = response?.headers.get('content-type')?.split(';')[0]?.trim() ?? ''
+    if (!response || !IMAGE_TYPES.includes(contentType)) {
+      await response?.body?.cancel()
+      return null
+    }
+    const data = await readLimited(response, MAX_IMAGE_BYTES)
+    return data ? { base64: encodeBase64(data), contentType } : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Service gratuit d'aperçu de liens (sans clé, ~50 appels par jour) : il passe là où la lecture
+ * directe est bloquée par certains sites. Il ne reçoit que l'adresse publique du produit.
+ */
+async function microlinkImage(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`, {
+      signal: AbortSignal.timeout(10000),
+    })
+    const body = await response.json()
+    const image = body?.status === 'success' ? body.data?.image?.url : null
+    return typeof image === 'string' && isPublicUrl(image) ? image : null
+  } catch {
+    return null
+  }
+}
+
 // ---------- Point d'entrée ----------
 
 Deno.serve(async (request) => {
@@ -104,39 +156,28 @@ Deno.serve(async (request) => {
   }
   if (!isPublicUrl(url)) return json({ error: 'url' }, 400)
 
-  try {
-    const page = await safeFetch(url, 'text/html,application/xhtml+xml')
-    if (!page) return json({ image: null, price: null })
-    const bytes = await readLimited(page, MAX_PAGE_BYTES, true)
-    const html = bytes ? new TextDecoder().decode(bytes) : ''
-    const found = extract(html)
-    // Diagnostic visible dans Supabase > Edge Functions > link-preview > Logs
-    console.log(
-      JSON.stringify({
-        host: new URL(page.url || url).hostname,
-        bytes: bytes?.length ?? 0,
-        antiRobot: /captcha|api-services-support@amazon/i.test(html.slice(0, 20000)),
-        image: !!found.image,
-        price: found.price,
-      }),
-    )
+  // 1. Lecture directe de la page (image et prix)
+  const page = await readPage(url)
+  const price = page?.found.price ?? null
+  let image = page?.found.image ? await fetchImage(new URL(page.found.image, page.base).href) : null
+  let source = image ? 'page' : null
 
-    let image: { base64: string; contentType: string } | null = null
-    if (found.image) {
-      const imageUrl = new URL(found.image, page.url || url).href
-      const response = await safeFetch(imageUrl, 'image/avif,image/webp,image/png,image/jpeg,*/*;q=0.5')
-      const contentType = response?.headers.get('content-type')?.split(';')[0]?.trim() ?? ''
-      if (response && IMAGE_TYPES.includes(contentType)) {
-        const data = await readLimited(response, MAX_IMAGE_BYTES)
-        if (data) image = { base64: encodeBase64(data), contentType }
-      } else {
-        await response?.body?.cancel()
-      }
-    }
-    return json({ image, price: found.price })
-  } catch (error) {
-    console.error('link-preview', url, error)
-    // Page inaccessible, trop lente ou bloquée (anti-robot) : pas d'aperçu.
-    return json({ image: null, price: null })
+  // 2. Secours sans prix : Microlink, quand le site bloque la lecture directe (Amazon notamment).
+  if (!image) {
+    const fallback = await microlinkImage(url)
+    if (fallback) image = await fetchImage(fallback)
+    if (image) source = 'microlink'
   }
+
+  // Diagnostic visible dans Supabase > Edge Functions > link-preview > Logs
+  console.log(
+    JSON.stringify({
+      host: new URL(url).hostname,
+      bytes: page?.bytes ?? 0,
+      antiRobot: page?.antiRobot ?? null,
+      image: source,
+      price,
+    }),
+  )
+  return json({ image, price })
 })

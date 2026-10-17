@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { Check, ImageDown, LoaderCircle, Trash2, X } from '@lucide/vue'
+import { Check, ClipboardPaste, Image, ImageDown, LoaderCircle, Trash2, X } from '@lucide/vue'
 import BottomSheet from '@/core/components/BottomSheet.vue'
 import { useNetworkStore } from '@/core/stores/network'
 import { displayDomain, parseWebUrl } from '@/core/url'
+import { compressPreview } from '../composables/imageCompression'
 import { parsePrice } from '../composables/itemName'
 import { useOptionsStore, type OptionImageChange, type OptionInput } from '../stores/options'
 import { usePhotosStore } from '../stores/photos'
@@ -50,6 +51,61 @@ function setNewImage(blob: Blob | null) {
 function removeImage() {
   setNewImage(null)
   imageRemoved.value = true
+  imageOrigin.value = null
+}
+
+// ---------- Image ajoutée à la main : collée depuis la page du produit, ou depuis la galerie ----------
+// Gratuit et valable pour tous les sites, y compris ceux qui bloquent la lecture automatique.
+const imageOrigin = ref<'page' | 'paste' | 'gallery' | null>(null)
+const imageError = ref<string | null>(null)
+/** Image en cours de lecture (le collage peut prendre une seconde). */
+const imageBusy = ref<'paste' | 'gallery' | null>(null)
+const gallery = ref<HTMLInputElement>()
+const canPaste = typeof navigator !== 'undefined' && !!navigator.clipboard?.read
+
+const ORIGIN_LABEL = {
+  page: 'Image trouvée sur la page.',
+  paste: 'Image collée.',
+  gallery: 'Image de la galerie.',
+}
+
+async function useImage(image: Blob, origin: 'paste' | 'gallery') {
+  imageBusy.value = origin
+  try {
+    setNewImage(await compressPreview(image))
+    imageRemoved.value = false
+    imageOrigin.value = origin
+    imageError.value = null
+  } catch {
+    imageError.value = "Cette image n'a pas pu être lue."
+  } finally {
+    imageBusy.value = null
+  }
+}
+
+/** Sur la page du produit : appui long sur la photo, « Copier », puis « Coller l'image » ici. */
+async function pasteImage() {
+  imageError.value = null
+  imageBusy.value = 'paste'
+  try {
+    for (const item of await navigator.clipboard.read()) {
+      const type = item.types.find((t) => t.startsWith('image/'))
+      if (type) return await useImage(await item.getType(type), 'paste')
+    }
+    imageError.value =
+      'Aucune image copiée. Sur la page du produit : appui long sur la photo, puis « Copier ».'
+  } catch {
+    imageError.value = 'Collage refusé. Autorisez-le, ou choisissez une image dans la galerie.'
+  } finally {
+    imageBusy.value = null
+  }
+}
+
+function onGallery(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (file) void useImage(file, 'gallery')
 }
 
 /** undefined : inchangée ; null : retirée ; Blob : nouvelle miniature. */
@@ -71,6 +127,8 @@ watch(
     requestId++
     setNewImage(null)
     imageRemoved.value = false
+    imageOrigin.value = null
+    imageError.value = null
     preview.status = 'idle'
     preview.priceFound = false
   },
@@ -96,6 +154,7 @@ async function lookup(target: string) {
   if (result.image) {
     setNewImage(result.image)
     imageRemoved.value = false
+    imageOrigin.value = 'page'
   }
   // Le prix trouvé ne remplace jamais un prix déjà saisi.
   if (result.price != null && !form.price.trim()) {
@@ -181,8 +240,11 @@ function submit() {
         </p>
       </div>
 
-      <div v-if="imageSrc" class="flex items-center gap-3">
-        <div class="relative size-20 shrink-0 overflow-hidden rounded-2xl border border-line bg-white">
+      <div class="flex items-center gap-3">
+        <div
+          v-if="imageSrc"
+          class="relative size-20 shrink-0 overflow-hidden rounded-2xl border border-line bg-white"
+        >
           <img :src="imageSrc" alt="Aperçu de l'option" class="size-full object-contain" />
           <button
             type="button"
@@ -193,7 +255,30 @@ function submit() {
             <X :size="14" />
           </button>
         </div>
-        <p class="text-sm text-ink-soft">Image trouvée sur la page.</p>
+        <div class="flex min-w-0 flex-col items-start gap-2">
+          <p v-if="imageSrc && imageOrigin" class="text-sm text-ink-soft">{{ ORIGIN_LABEL[imageOrigin] }}</p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-if="canPaste"
+              type="button"
+              class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-line bg-card px-3 text-sm font-semibold"
+              :disabled="!!imageBusy"
+              @click="pasteImage"
+            >
+              <ClipboardPaste :size="16" /> {{ imageBusy === 'paste' ? 'Collage…' : "Coller l'image" }}
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-line bg-card px-3 text-sm font-semibold"
+              :disabled="!!imageBusy"
+              @click="gallery?.click()"
+            >
+              <Image :size="16" /> {{ imageBusy === 'gallery' ? 'Chargement…' : 'Galerie' }}
+            </button>
+          </div>
+          <p v-if="imageError" class="text-xs text-ink-soft" role="alert">{{ imageError }}</p>
+        </div>
+        <input ref="gallery" type="file" accept="image/*" class="hidden" @change="onGallery" />
       </div>
       <button
         v-if="url && preview.status !== 'loading' && (option || preview.status === 'none')"
